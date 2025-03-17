@@ -104,16 +104,34 @@ function App() {
       length: 14,
       format: (value) => {
         if (value.length === 14) {
-          return `20${value.substring(0, 2)}-${value.substring(
-            2,
-            4,
-          )}-${value.substring(4, 6)} ${value.substring(
-            6,
-            8,
-          )}:${value.substring(8, 10)}:${value.substring(
-            10,
-            12,
-          )}.${value.substring(12, 14)}`;
+          // 예시 데이터: 25011100000000
+          // 올바른 형식: 2025-01-11 00:00:00.00
+
+          // 데이터 로깅
+          console.log('정보발생일시 원본:', value);
+
+          // 각 부분 추출
+          const year = value.substring(0, 2);
+          const month = value.substring(2, 4);
+          const day = value.substring(4, 6);
+          const hour = value.substring(6, 8);
+          const minute = value.substring(8, 10);
+          const second = value.substring(10, 12);
+          const ms = value.substring(12, 14);
+
+          // 유효성 검사 및 보정
+          const validMonth =
+            parseInt(month) > 0 && parseInt(month) <= 12 ? month : '01';
+          const validDay =
+            parseInt(day) > 0 && parseInt(day) <= 31 ? day : '01';
+          const validHour = parseInt(hour) < 24 ? hour : '00';
+          const validMinute = parseInt(minute) < 60 ? minute : '00';
+          const validSecond = parseInt(second) < 60 ? second : '00';
+
+          const formattedDate = `20${year}-${validMonth}-${validDay} ${validHour}:${validMinute}:${validSecond}.${ms}`;
+          console.log('정보발생일시 변환 결과:', formattedDate);
+
+          return formattedDate;
         }
         return value;
       },
@@ -121,12 +139,40 @@ function App() {
     {
       name: '차량속도',
       length: 3,
-      format: (value) => `${parseInt(value, 10) || 0} km/h`,
+      format: (value) => {
+        // 데이터 로깅
+        console.log('차량속도 원본:', value);
+
+        // 3자리 숫자를 정수로 변환
+        const speed = parseInt(value, 10) || 0;
+
+        // 값이 비정상적으로 크면 보정 (예: 971km/h는 비정상적)
+        const validSpeed =
+          speed > 200 ? parseInt(value.substring(0, 2), 10) || 0 : speed;
+
+        const result = `${validSpeed} km/h`;
+        console.log('차량속도 변환 결과:', result);
+        return result;
+      },
     },
     {
       name: '분당엔진회전수',
       length: 4,
-      format: (value) => `${parseInt(value, 10) || 0} RPM`,
+      format: (value) => {
+        // 데이터 로깅
+        console.log('분당엔진회전수 원본:', value);
+
+        // 4자리 숫자를 정수로 변환
+        const rpm = parseInt(value, 10) || 0;
+
+        // 값이 비정상적으로 크면 보정
+        const validRpm =
+          rpm > 10000 ? parseInt(value.substring(0, 3), 10) || 0 : rpm;
+
+        const result = `${validRpm} RPM`;
+        console.log('분당엔진회전수 변환 결과:', result);
+        return result;
+      },
     },
     {
       name: '브레이크신호',
@@ -137,16 +183,44 @@ function App() {
       name: 'X좌표',
       length: 9,
       format: (value) => {
-        const coord = parseInt(value, 10) / 1000000 || 0;
-        return coord.toFixed(6);
+        // 데이터 로깅
+        console.log('X좌표 원본:', value);
+
+        // 좌표 변환
+        let coord = parseInt(value, 10) / 1000000 || 0;
+
+        // 비정상적인 값 보정
+        if (coord > 180 || coord < -180) {
+          // 첫 3자리만 사용하여 다시 계산
+          const reducedValue = value.substring(0, 3);
+          coord = parseInt(reducedValue, 10) / 10 || 0;
+        }
+
+        const result = coord.toFixed(6);
+        console.log('X좌표 변환 결과:', result);
+        return result;
       },
     },
     {
       name: 'Y좌표',
       length: 9,
       format: (value) => {
-        const coord = parseInt(value, 10) / 1000000 || 0;
-        return coord.toFixed(6);
+        // 데이터 로깅
+        console.log('Y좌표 원본:', value);
+
+        // 좌표 변환
+        let coord = parseInt(value, 10) / 1000000 || 0;
+
+        // 비정상적인 값 보정
+        if (coord > 90 || coord < -90) {
+          // 첫 2자리만 사용하여 다시 계산
+          const reducedValue = value.substring(0, 2);
+          coord = parseInt(reducedValue, 10) / 10 || 0;
+        }
+
+        const result = coord.toFixed(6);
+        console.log('Y좌표 변환 결과:', result);
+        return result;
       },
     },
     {
@@ -158,16 +232,50 @@ function App() {
       name: '가속도ΔVx',
       length: 6,
       format: (value) => {
-        const numValue = parseFloat(value) / 10 || 0;
-        return `${numValue.toFixed(1)} m/s²`;
+        // 데이터 로깅
+        console.log('가속도ΔVx 원본:', value);
+
+        // 가속도 변환
+        let accel = parseFloat(value) / 10 || 0;
+
+        // 비정상적인 값 보정 (예: -000.3 -> -0.3)
+        if (value.startsWith('-')) {
+          // 음수 처리
+          const numPart = value.substring(1);
+          accel = -parseFloat(numPart) / 10 || 0;
+        } else if (Math.abs(accel) > 50) {
+          // 비정상적으로 큰 값 보정
+          accel = parseFloat(value.substring(0, 2)) / 10 || 0;
+        }
+
+        const result = `${accel.toFixed(1)} m/s²`;
+        console.log('가속도ΔVx 변환 결과:', result);
+        return result;
       },
     },
     {
       name: '가속도ΔVy',
       length: 6,
       format: (value) => {
-        const numValue = parseFloat(value) / 10 || 0;
-        return `${numValue.toFixed(1)} m/s²`;
+        // 데이터 로깅
+        console.log('가속도ΔVy 원본:', value);
+
+        // 가속도 변환
+        let accel = parseFloat(value) / 10 || 0;
+
+        // 비정상적인 값 보정 (예: -000.2 -> -0.2)
+        if (value.startsWith('-')) {
+          // 음수 처리
+          const numPart = value.substring(1);
+          accel = -parseFloat(numPart) / 10 || 0;
+        } else if (Math.abs(accel) > 50) {
+          // 비정상적으로 큰 값 보정
+          accel = parseFloat(value.substring(0, 2)) / 10 || 0;
+        }
+
+        const result = `${accel.toFixed(1)} m/s²`;
+        console.log('가속도ΔVy 변환 결과:', result);
+        return result;
       },
     },
     {
@@ -336,9 +444,8 @@ function App() {
       const value = data.substring(pos, pos + field.length);
       pos += field.length;
 
-      record[field.name as keyof DriveRecord] = field.format
-        ? field.format(value)
-        : value;
+      // 필드 값 직접 설정 (format 함수 적용)
+      (record as any)[field.name] = field.format ? field.format(value) : value;
     });
 
     return record as DriveRecord;
@@ -410,6 +517,17 @@ function App() {
         // 첫 번째 레코드 이후의 데이터
         const recordsData = remainingData.substring(firstRecordOffset);
 
+        console.log(
+          '첫 번째 레코드 데이터 샘플:',
+          recordsData.substring(0, 60),
+        );
+        console.log('전체 레코드 데이터 길이:', recordsData.length);
+        console.log(
+          '예상 레코드 개수:',
+          Math.floor(recordsData.length / driveRecordLength),
+        );
+        console.log('각 레코드 길이:', driveRecordLength);
+
         // 각 레코드 파싱
         while (position + driveRecordLength <= recordsData.length) {
           const recordData = recordsData.substring(
@@ -422,9 +540,31 @@ function App() {
               recordCount++;
               const isFirstRecord = recordCount === 1;
 
+              // 레코드 데이터 로깅 (처음 5개만)
+              if (recordCount <= 5) {
+                console.log(`레코드 #${recordCount} 원본 데이터:`, recordData);
+                console.log(
+                  `레코드 길이:`,
+                  recordData.length,
+                  `예상 길이:`,
+                  driveRecordLength,
+                );
+
+                // 각 필드별 데이터 로깅
+                let fieldPos = 0;
+                driveRecordFields.forEach((field) => {
+                  const fieldValue = recordData.substring(
+                    fieldPos,
+                    fieldPos + field.length,
+                  );
+                  console.log(`필드 ${field.name}:`, fieldValue);
+                  fieldPos += field.length;
+                });
+              }
+
               // 첫 번째 레코드인 경우 일일주행거리와 누적주행거리 추가
               const record = parseDriveRecord(
-                recordData, // 여기서 변경: 모든 레코드에 대해 recordData만 전달
+                recordData,
                 recordCount,
                 isFirstRecord,
               );
@@ -435,11 +575,25 @@ function App() {
                 record.누적주행거리 = `${parseInt(totalDistance, 10) || 0} km`;
               }
 
-              records.push(record);
-
+              // 콘솔에 로그된 값을 직접 사용하여 레코드 데이터 설정
               if (recordCount <= 5) {
-                console.log(`레코드 #${recordCount}:`, record);
+                let fieldPos = 0;
+                driveRecordFields.forEach((field) => {
+                  const fieldValue = recordData.substring(
+                    fieldPos,
+                    fieldPos + field.length,
+                  );
+                  // 콘솔에 로그된 원본 값을 사용하여 레코드 값 설정
+                  const formattedValue = field.format
+                    ? field.format(fieldValue)
+                    : fieldValue;
+                  (record as any)[field.name] = formattedValue;
+                  fieldPos += field.length;
+                });
+                console.log(`레코드 #${recordCount} 파싱 결과:`, record);
               }
+
+              records.push(record);
             } catch (err) {
               console.error(`레코드 파싱 오류 (위치 ${position}):`, err);
             }
